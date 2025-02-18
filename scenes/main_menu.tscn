@@ -80,6 +80,14 @@ theme = ExtResource("2_b784e")
 text = "Join Game"
 flat = true
 
+[node name="LineEdit" type="LineEdit" parent="Menu"]
+layout_mode = 0
+offset_left = 348.0
+offset_top = 120.0
+offset_right = 629.0
+offset_bottom = 151.0
+placeholder_text = "Enter Host's OID"
+
 [connection signal="pressed" from="Menu/Exit" to="." method="exit_game"]
 [connection signal="pressed" from="Menu/HostGame" to="." method="host_game"]
 [connection signal="pressed" from="Menu/JoinGame" to="." method="join_game"]
