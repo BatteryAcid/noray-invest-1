@@ -17,7 +17,7 @@ func _ready():
 		
 		# Noray
 		Noray.on_connect_nat.connect(_handle_connect)
-		#Noray.on_connect_relay.connect(_handle_connect)
+		Noray.on_connect_relay.connect(_handle_connect)
 		
 		# NOTE: can comment this out if you want to test locally as a dedicated server (no client)
 		if not OS.has_feature("dedicated_server"):
