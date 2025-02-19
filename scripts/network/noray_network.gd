@@ -1,13 +1,14 @@
 extends Node
 
-var host = "ec2-34-217-179-133.us-west-2.compute.amazonaws.com"
+var host = "ec2-34-221-170-98.us-west-2.compute.amazonaws.com"
 var port = 8890
 var _current_host_oid = ""
 
 func _ready():
 	# TODO: right now this signal is only for client, the server one is in multiplayer_manager, refactor?
-	Noray.on_connect_nat.connect(_handle_nat_connect)
-	Noray.on_connect_relay.connect(_handle_relay_connect)
+	if !NetworkManager.is_hosting_game:
+		Noray.on_connect_nat.connect(_handle_nat_connect)
+		Noray.on_connect_relay.connect(_handle_relay_connect)
 
 func create_server_peer():
 	print("Create server peer, calling to register with Noray...")
@@ -74,7 +75,7 @@ func _handle_relay_connect(address: String, port: int) -> Error:
 	return await _handle_connect(address, port)
 	
 func _handle_connect(address: String, port: int) -> Error:
-	print("Client handle connect to %s:%s" % [address, port])
+	print("Client handle connect to %s:%s, Noray.local_port: %s" % [address, port, Noray.local_port])
 	#print("networkid: %s" % multiplayer.get_unique_id())
 	
  	# Do a handshake
@@ -94,7 +95,7 @@ func _handle_connect(address: String, port: int) -> Error:
 	err = peer.create_client(address, port, 0, 0, 0, Noray.local_port)
 
 	if err != OK:
-		print("Create client failure failure %s" % err)
+		print("Create client failure %s" % err)
 		return err
 
 	# TODO: will probably need this??

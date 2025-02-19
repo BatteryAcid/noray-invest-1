@@ -58,7 +58,7 @@ func _client_disconnected(network_id: int):
 
 # Noray - Host callback for when clients connect
 func _handle_connect(address: String, port: int) -> Error:
-	print("Noray host handle connect...")
+	print("Noray host handle connect: %s:%s" % [address, port])
 	var peer = get_tree().get_multiplayer().multiplayer_peer as ENetMultiplayerPeer
 	var err = await PacketHandshake.over_enet(peer.host, address, port)
 
