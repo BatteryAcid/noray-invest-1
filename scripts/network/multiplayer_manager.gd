@@ -1,9 +1,10 @@
 extends Node
 
+# The bulk of this script is for the authority (host/server).
+
 @export var _player_spawn_point: Node3D
 
 var _multiplayer_scene = preload("res://scenes/player/player.tscn")
-
 var _players_in_game: Dictionary = {}
 
 func _ready():
@@ -15,9 +16,9 @@ func _ready():
 		multiplayer.peer_connected.connect(_client_connected)
 		multiplayer.peer_disconnected.connect(_client_disconnected)
 		
-		# Noray
-		Noray.on_connect_nat.connect(_handle_connect)
-		Noray.on_connect_relay.connect(_handle_connect)
+		# Noray signals 
+		Noray.on_connect_nat.connect(_handle_noray_connect)
+		Noray.on_connect_relay.connect(_handle_noray_connect)
 		
 		# NOTE: can comment this out if you want to test locally as a dedicated server (no client)
 		if not OS.has_feature("dedicated_server"):
@@ -47,7 +48,6 @@ func _ready_player(player: Player):
 	player.position = Vector3(randi_range(-2, 2), 1, randi_range(-2, 2))
 
 # Connection lifecycle
-# TODO: will these lifecycles need to be refactored for Noray?
 func _client_connected(network_id: int):
 	print("Client connected %s" % network_id)
 	_add_player_to_game(network_id)
@@ -57,7 +57,7 @@ func _client_disconnected(network_id: int):
 	_remove_player_from_game(network_id)
 
 # Noray - Host callback for when clients connect
-func _handle_connect(address: String, port: int) -> Error:
+func _handle_noray_connect(address: String, port: int) -> Error:
 	print("Noray host handle connect: %s:%s" % [address, port])
 	var peer = get_tree().get_multiplayer().multiplayer_peer as ENetMultiplayerPeer
 	var err = await PacketHandshake.over_enet(peer.host, address, port)

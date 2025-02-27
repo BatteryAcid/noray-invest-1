@@ -1,27 +1,25 @@
 extends Node
 
-var host = "ec2-34-221-170-98.us-west-2.compute.amazonaws.com"
 var port = 8890
 var _current_host_oid = ""
 
 func _ready():
-	# TODO: right now this signal is only for client, the server one is in multiplayer_manager, refactor?
 	if !NetworkManager.is_hosting_game:
 		Noray.on_connect_nat.connect(_handle_nat_connect)
 		Noray.on_connect_relay.connect(_handle_relay_connect)
 
-func create_server_peer():
+func create_server_peer(host_ip: String):
 	print("Create server peer, calling to register with Noray...")
-	await _register_with_noray()
+	await _register_with_noray(host_ip)
 	print("Calling to start Noray host...")
 	_start_noray_host()
 
-func _register_with_noray():
+func _register_with_noray(host_ip: String):
 	print("Register with Noray...")
 	var err = OK
 	
 	# Connect to noray
-	err = await Noray.connect_to_host(host, port)
+	err = await Noray.connect_to_host(host_ip, port)
 	if err != OK:
 		print("Failed to connect %s" % err)
 		return err # Failed to connect
@@ -45,16 +43,16 @@ func _start_noray_host():
 	
 	var noray_network_peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
 	noray_network_peer.create_server(Noray.local_port)
-	multiplayer.multiplayer_peer = noray_network_peer # TODO: is this line required?
+	multiplayer.multiplayer_peer = noray_network_peer
 	
 	if err != OK:
 		print("Failed to listen on port %s" % err)
 		return false # Failed to listen on port
 
-func create_client_peer(hosts_oid):
+func create_client_peer(hosts_ip_to_connect: String, hosts_oid: String):
 	print("Create client peer, calling to register with Noray...")
 	_current_host_oid = hosts_oid
-	await _register_with_noray()
+	await _register_with_noray(hosts_ip_to_connect)
 	
 	print("Create client peer for Noray through NAT with OID: %s" % hosts_oid)
 	# Try connecting using NAT punchthrough
@@ -76,7 +74,7 @@ func _handle_relay_connect(address: String, port: int) -> Error:
 	
 func _handle_connect(address: String, port: int) -> Error:
 	print("Client handle connect to %s:%s, Noray.local_port: %s" % [address, port, Noray.local_port])
-	#print("networkid: %s" % multiplayer.get_unique_id())
+	# print("NetworkId: %s" % multiplayer.get_unique_id())
 	
  	# Do a handshake
 	var udp = PacketPeerUDP.new()
@@ -98,7 +96,6 @@ func _handle_connect(address: String, port: int) -> Error:
 		print("Create client failure %s" % err)
 		return err
 
-	# TODO: will probably need this??
 	multiplayer.multiplayer_peer = peer
 
 	return OK
