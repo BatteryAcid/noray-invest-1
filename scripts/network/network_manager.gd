@@ -13,6 +13,8 @@ var _noray_network = preload("res://scenes/network/noray_network.tscn")
 var _network = _enet_network
 
 var is_hosting_game = false
+var active_host_ip = ""
+var active_game_id = ""
 
 func noray_enabled(is_enabled: bool = false):
 	print("Setting network type to Noray: %s" % is_enabled)
@@ -32,6 +34,7 @@ func host_game(host_ip: String):
 	is_hosting_game = true
 	var active_network = _network.instantiate()
 	add_child(active_network)
+	active_host_ip = host_ip
 	active_network.create_server_peer(host_ip)
 
 func join_game(host_ip: String, game_id: String = ""):

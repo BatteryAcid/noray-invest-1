@@ -1,0 +1,107 @@
+[gd_scene load_steps=3 format=3 uid="uid://gvalf557x803"]
+
+[ext_resource type="Script" path="res://scripts/menus/in_game_menu.gd" id="1_0y0gb"]
+[ext_resource type="Theme" uid="uid://e1no5yb08xdc" path="res://asssets/ui/menu_theme.tres" id="2_7s4xl"]
+
+[node name="InGameMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_0y0gb")
+
+[node name="GridContainer" type="GridContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/h_separation = 0
+theme_override_constants/v_separation = 8
+
+[node name="Resume" type="Button" parent="GridContainer"]
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+theme = ExtResource("2_7s4xl")
+theme_override_font_sizes/font_size = 24
+text = "Resume"
+
+[node name="Quit" type="Button" parent="GridContainer"]
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+theme = ExtResource("2_7s4xl")
+theme_override_font_sizes/font_size = 24
+text = "Quit"
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+offset_right = 550.0
+offset_bottom = 50.0
+theme = ExtResource("2_7s4xl")
+
+[node name="IpPanel" type="HBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 23.0
+grow_horizontal = 2
+
+[node name="IpLabel" type="RichTextLabel" parent="Panel/IpPanel"]
+clip_contents = false
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 2
+theme_override_font_sizes/normal_font_size = 16
+text = "Host IP"
+selection_enabled = true
+deselect_on_focus_loss_enabled = false
+drag_and_drop_selection_enabled = false
+
+[node name="CopyIp" type="Button" parent="Panel/IpPanel"]
+layout_direction = 2
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "copy"
+
+[node name="GameIdPanel" type="HBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -23.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="GameIdPanel" type="RichTextLabel" parent="Panel/GameIdPanel"]
+clip_contents = false
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 2
+theme_override_font_sizes/normal_font_size = 16
+text = "Game Id"
+selection_enabled = true
+deselect_on_focus_loss_enabled = false
+drag_and_drop_selection_enabled = false
+
+[node name="CopyGameId" type="Button" parent="Panel/GameIdPanel"]
+layout_direction = 2
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "copy"
+
+[connection signal="pressed" from="GridContainer/Resume" to="." method="_on_resume_pressed"]
+[connection signal="pressed" from="GridContainer/Quit" to="." method="_on_quit_pressed"]
+[connection signal="pressed" from="Panel/IpPanel/CopyIp" to="." method="copy_hostip_to_clipboard"]
+[connection signal="pressed" from="Panel/GameIdPanel/CopyGameId" to="." method="copy_gameid_to_clipboard"]

@@ -26,13 +26,11 @@ func host_game():
 	print("Host game pressed")
 	if NetworkManager.selected_network == NetworkManager.AvailableNetworks.NORAY:
 		_show_host_noray_options()
-		#if host_ip_input.text && host_ip_input.text != "":
-			#NetworkManager.host_game(host_ip_input.text)
-			#get_tree().call_deferred(&"change_scene_to_packed", preload(GAME_SCENE))
 	else:
 		NetworkManager.host_game("") # Running ENet server doesn't require an IP
 		get_tree().call_deferred(&"change_scene_to_packed", preload(GAME_SCENE))
-	
+
+# TODO: clean up
 func _show_host_noray_options():
 	noray_option_label.text = "Host Game with Noray!"
 	_host_selected = true
@@ -67,10 +65,6 @@ func join_game():
 	# NOTE: The game_id can represent both the ip to connect to or the host's game ID
 	
 	if NetworkManager.selected_network == NetworkManager.AvailableNetworks.NORAY:
-		# Host IP AND Game ID are both required for Noray 
-		#if host_ip_input.text && host_ip_input.text != "" && game_id_input.text && game_id_input.text != "":
-			#NetworkManager.join_game(host_ip_input.text, game_id_input.text)
-			#get_tree().call_deferred(&"change_scene_to_packed", preload(GAME_SCENE))
 		_show_client_noray_options()
 			
 	elif game_id_input.text && game_id_input.text != "":

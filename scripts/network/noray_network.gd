@@ -28,6 +28,9 @@ func _register_with_noray(host_ip: String):
 	Noray.register_host()
 	await Noray.on_pid
 
+	print("Noray oid: %s" % Noray.oid)
+	NetworkManager.active_game_id = Noray.oid
+
 	# Register remote address
 	# This is where noray will direct traffic
 	err = await Noray.register_remote()
