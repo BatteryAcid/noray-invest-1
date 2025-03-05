@@ -1,16 +1,17 @@
 extends Node
 
+@export var active_host_label: RichTextLabel
+@export var game_id_label: RichTextLabel
+
 func _ready() -> void:
 	self.visible = false
 
 func show():
-	$Panel/IpPanel/IpLabel.text = NetworkManager.active_host_ip
-	$Panel/GameIdPanel/GameIdPanel.text = NetworkManager.active_game_id
+	active_host_label.text = NetworkManager.active_host_ip
+	game_id_label.text = NetworkManager.active_game_id
 	
 	self.visible = true
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-	
-	
 
 func hide():
 	self.visible = false
@@ -25,6 +26,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _on_resume_pressed() -> void:
 	hide()
+
+func _on_main_menu_pressed():
+	NetworkManager.disconnect_from_game()
 
 func _on_quit_pressed() -> void:
 	get_tree().quit()

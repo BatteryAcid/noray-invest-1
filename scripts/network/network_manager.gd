@@ -1,57 +1,119 @@
 extends Node
 
-# Autoloader (singleton) to manage network setup
+# Autoloader (singleton) to manage network selection and setup
+# IMPORTANT: 
+# Variables like is_hosting_game must be reset upon exiting to main menu after a game has been played.
+
+const GAME_SCENE = "res://scenes/game.tscn"
 
 enum AvailableNetworks {ENET, NORAY}
-var selected_network: AvailableNetworks = AvailableNetworks.ENET # default to Enet
+
+var _available_networks: Dictionary = {
+	0: {"scene":"res://scenes/network/enet_network.tscn", "menu":"res://scenes/menus/enet_menu.tscn"},
+	1: {"scene":"res://scenes/network/noray_network.tscn", "menu":"res://scenes/menus/noray_menu.tscn"},
+}
+
+# Default to ENET
+var selected_network: AvailableNetworks = AvailableNetworks.ENET
+var selected_network_configuration: Dictionary = _available_networks[0]
 
 var _loading_scene = preload("res://scenes/loading.tscn")
 var _active_loading_scene
-
-var _enet_network = preload("res://scenes/network/enet_network.tscn")
-var _noray_network = preload("res://scenes/network/noray_network.tscn")
-var _network = _enet_network
-
+var active_network_node
 var is_hosting_game = false
 var active_host_ip = ""
 var active_game_id = ""
 
-func noray_enabled(is_enabled: bool = false):
-	print("Setting network type to Noray: %s" % is_enabled)
-	
-	if is_enabled:
-		selected_network = AvailableNetworks.NORAY
-		_network = _noray_network
-	else:
-		selected_network = AvailableNetworks.ENET
-		_network = _enet_network
-
-	print("Selected Network: %s" % selected_network)
-
-func host_game(host_ip: String):
+# TODO: probably needs clean up for dedicated server
+func host_game(host_ip: String = ""):
 	print("Host game")
-	show_loading()
-	is_hosting_game = true
-	var active_network = _network.instantiate()
-	add_child(active_network)
-	active_host_ip = host_ip
-	active_network.create_server_peer(host_ip)
-
-func join_game(host_ip: String, game_id: String = ""):
-	print("Join game, host_ip: %s, game_id: %s" % [host_ip, game_id])
-	show_loading()
-
-	var active_network = _network.instantiate()
-	add_child(active_network)
-	active_network.create_client_peer(host_ip, game_id)
+	if not OS.has_feature("dedicated_server"):
+		show_loading()
 	
+	# print("Selected network scene: %s" % selected_network_configuration.scene)
+	
+	# Keep these before the network scene is instantiated, to allow its _ready function to correctly read these properties.
+	is_hosting_game = true
+	active_host_ip = host_ip
+	
+	# We add the scene representing the selected network to the current tree
+	# so that we can access the multiplayer APIs
+	var network_scene = load(selected_network_configuration.scene)
+	active_network_node = network_scene.instantiate()
+	add_child(active_network_node)
+	
+	# Need to await here to avoid loading game scene to early
+	await active_network_node.create_server_peer(host_ip)
+	
+	_load_game_scene()
+
+func join_game(host_ip: String, host_port: String = "", game_id: String = ""):
+	print("Join game, host_ip: %s:%s, game_id: %s" % [host_ip, host_port, game_id])
+	show_loading()
+	
+	var network_scene = load(selected_network_configuration.scene)
+	active_network_node = network_scene.instantiate()
+	add_child(active_network_node)
+	
+	# Connect client-side lifecycle signals
+	active_network_node.network_client_connected.connect(_load_game_scene)
+	active_network_node.network_server_disconnected.connect(disconnect_from_game)
+	
+	active_network_node.create_client_peer(host_ip, host_port.to_int(), game_id)
+	
+func set_selected_network(network_selected: AvailableNetworks):
+	print("Network selection updated: %s" % network_selected)
+	selected_network = network_selected
+	selected_network_configuration = _available_networks[network_selected]
+
+# Use this to kill the network connection and clean up for return to main menu
+func disconnect_from_game():
+	_load_main_menu_scene()
+	
+	NetworkTime.stop() # Stops the network type synchronizer from spamming ping RPCs after disconnect
+	multiplayer.multiplayer_peer = null # Disconnect peer
+	
+	# Remove any child networks nodes
+	for child in get_children():
+		print("Removing child network node")
+		child.queue_free()
+	
+	# Reset properties
+	reset_selected_network()
+	reset_network_properties()
+	
+	# Make sure player has mouse access to select menu options
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	
+	# Hit this in case we disconnected during loading screen
+	hide_loading()
+
+func reset_network_properties():
+	is_hosting_game = false
+	active_host_ip = ""
+	active_game_id = ""
+	
+	active_network_node.queue_free()
+	active_network_node = null
+
+func reset_selected_network():
+	selected_network = AvailableNetworks.ENET
+	selected_network_configuration = _available_networks[0]
+
+func _load_game_scene():
+	print("NetworkManager: Loading game scene...")
+	get_tree().call_deferred(&"change_scene_to_packed", preload(GAME_SCENE))
+
+func _load_main_menu_scene():
+	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+
 func show_loading():
 	print("Show loading")
 	_active_loading_scene = _loading_scene.instantiate()
-	add_child(_active_loading_scene)
+	get_tree().root.add_child(_active_loading_scene)
 	
 func hide_loading():
 	print("Hide loading")
 	if _active_loading_scene != null:
-		remove_child(_active_loading_scene)
+		get_tree().root.remove_child(_active_loading_scene)
 		_active_loading_scene.queue_free()

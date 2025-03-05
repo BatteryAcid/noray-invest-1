@@ -1,33 +1,49 @@
 extends Node
 
+signal network_client_connected
+signal network_server_disconnected
+
 var port = 8890
 var _current_host_oid = ""
 
 func _ready():
 	if !NetworkManager.is_hosting_game:
-		Noray.on_connect_nat.connect(_handle_nat_connect)
-		Noray.on_connect_relay.connect(_handle_relay_connect)
+		setup_client_noray_connection_signals()
+	else:
+		setup_host_noray_connection_signals()
 
 func create_server_peer(host_ip: String):
-	print("Create server peer, calling to register with Noray...")
+	print("Create Noray server peer")
 	await _register_with_noray(host_ip)
-	print("Calling to start Noray host...")
 	_start_noray_host()
 
+func create_client_peer(host_ip: String, no_op: int, hosts_oid: String):
+	print("Create Noray client peer")
+	
+	# Stash the host_oid to use in the Noray connection signals
+	_current_host_oid = hosts_oid
+	await _register_with_noray(host_ip)
+	
+	setup_client_enet_connection_signals()
+	
+	print("Kickoff Noray connection through NAT punchthrough with OID: %s" % hosts_oid)
+	Noray.connect_nat(hosts_oid)
+
 func _register_with_noray(host_ip: String):
-	print("Register with Noray...")
+	print("Register with Noray hosted at: %s" % host_ip)
 	var err = OK
 	
 	# Connect to noray
 	err = await Noray.connect_to_host(host_ip, port)
 	if err != OK:
-		print("Failed to connect %s" % err)
+		print("Failed to connect to Noray for registration at %s:%s!" % [host_ip, port, err])
 		return err # Failed to connect
 
 	# Register host
 	Noray.register_host()
 	await Noray.on_pid
 
+	# Capture game_id to display on host client for sharing with others.
 	print("Noray oid: %s" % Noray.oid)
 	NetworkManager.active_game_id = Noray.oid
 
@@ -35,13 +51,13 @@ func _register_with_noray(host_ip: String):
 	# This is where noray will direct traffic
 	err = await Noray.register_remote()
 	if err != OK:
-		print("Failed to register %s" % err)
+		print("Failed to register remote %s" % err)
 		return err # Failed to register
 	
 	print("Finished Noray registration")
 
 func _start_noray_host():
-	print("Starting Noray host...")
+	print("Starting Noray host")
 	var err = OK
 	
 	var noray_network_peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
@@ -52,17 +68,8 @@ func _start_noray_host():
 		print("Failed to listen on port %s" % err)
 		return false # Failed to listen on port
 
-func create_client_peer(hosts_ip_to_connect: String, hosts_oid: String):
-	print("Create client peer, calling to register with Noray...")
-	_current_host_oid = hosts_oid
-	await _register_with_noray(hosts_ip_to_connect)
-	
-	print("Create client peer for Noray through NAT with OID: %s" % hosts_oid)
-	# Try connecting using NAT punchthrough
-	Noray.connect_nat(hosts_oid)
-
 func _handle_nat_connect(address: String, port: int) -> Error:
-	print("Handle nat connect...")
+	print("Attempting to connect client via NAT...")
 	var err = await _handle_connect(address, port)
 	if err != OK:
 		print("NAT connection failed from client, trying Relay instead...")
@@ -84,7 +91,7 @@ func _handle_connect(address: String, port: int) -> Error:
 	udp.bind(Noray.local_port)
 	udp.set_dest_address(address, port)
 
-	var err = await PacketHandshake.over_packet_peer(udp, 16)
+	var err = await PacketHandshake.over_packet_peer(udp, 8)
 	udp.close()
 
 	if err != OK:
@@ -102,3 +109,39 @@ func _handle_connect(address: String, port: int) -> Error:
 	multiplayer.multiplayer_peer = peer
 
 	return OK
+
+# Noray host signal for when clients connect
+func _handle_noray_client_connect(address: String, port: int) -> Error:
+	print("Noray host handle connect: %s:%s" % [address, port])
+	var peer = get_tree().get_multiplayer().multiplayer_peer as ENetMultiplayerPeer
+	var err = await PacketHandshake.over_enet(peer.host, address, port)
+
+	if err != OK:
+		print("Noray packet handshake failure %s" % err)
+		return err
+
+	return OK
+
+func _connected_to_server():
+	print("Noray client connected to server/host, on peer %s with auth: %s" % [multiplayer.get_unique_id(), get_multiplayer_authority()])
+	if not is_multiplayer_authority():
+		# Once our peer has a confirmed connection to the server/host, emit the connected signals
+		# to prepare for game play. Right now it just loads the game scene on the client.
+		network_client_connected.emit()
+
+func _noray_server_disconnected():
+	print("Server disconnected!")
+	network_server_disconnected.emit()
+
+func setup_host_noray_connection_signals():
+	Noray.on_connect_nat.connect(_handle_noray_client_connect)
+	Noray.on_connect_relay.connect(_handle_noray_client_connect)
+
+func setup_client_noray_connection_signals():
+	Noray.on_connect_nat.connect(_handle_nat_connect)
+	Noray.on_connect_relay.connect(_handle_relay_connect)
+
+func setup_client_enet_connection_signals():
+	multiplayer.connected_to_server.connect(_connected_to_server)
+	multiplayer.server_disconnected.connect(_noray_server_disconnected)
+	#multiplayer.peer_connected.connect(_noray_client_connected) # Right now there's no reason to use this...

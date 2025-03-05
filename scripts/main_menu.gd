@@ -1,105 +1,81 @@
 extends Control
 
-const GAME_SCENE = "res://scenes/game.tscn"
-const NORAY_CLIENT_PLACEHOLDER_TEXT = "Enter Host's Game ID"
-const ENET_CLIENT_PLACEHOLDER_TEXT = "Enter Host's IP"
-const DEFAULT_LOCALHOST_IP = "127.0.0.1"
-
 @export var host_game_button: Button
 @export var join_game_button: Button
-@export var go_button: Button
-@export var back_button: Button
-@export var host_ip_input: LineEdit
-@export var game_id_input: LineEdit # Can also be IP for non-noray setups
-@export var noray_option_label: RichTextLabel
+@export var toggle_secondary_network_checkbutton: CheckButton
+@export var secondary_network_menu_parent: Control
 
-var _host_selected = false
+var _is_hosting = false
 
 func _ready():
 	print("Main menu ready...")
+
 	if OS.has_feature("dedicated_server"):
-		print("Calling host game...")
-		NetworkManager.host_game("") # Running ENet dedicated server doesn't require an IP
-		get_tree().call_deferred(&"change_scene_to_packed", preload(GAME_SCENE))
+		print("Calling host game for dedicated server setup...")
+		NetworkManager.host_game()
 
 func host_game():
 	print("Host game pressed")
-	if NetworkManager.selected_network == NetworkManager.AvailableNetworks.NORAY:
-		_show_host_noray_options()
+	_is_hosting = true
+	
+	# Has a secondary network option been selected for host
+	if NetworkManager.selected_network != NetworkManager.AvailableNetworks.ENET:
+		_show_secondary_network_options(true)
 	else:
-		NetworkManager.host_game("") # Running ENet server doesn't require an IP
-		get_tree().call_deferred(&"change_scene_to_packed", preload(GAME_SCENE))
-
-# TODO: clean up
-func _show_host_noray_options():
-	noray_option_label.text = "Host Game with Noray!"
-	_host_selected = true
-	host_game_button.visible = false
-	join_game_button.visible = false
-	host_ip_input.visible = true
-	game_id_input.visible = false
-	go_button.visible = true
-	back_button.visible = true
-
-func _show_client_noray_options():
-	noray_option_label.text = "Connect to game on Noray!"
-	_host_selected = false
-	host_game_button.visible = false
-	join_game_button.visible = false
-	host_ip_input.visible = true
-	game_id_input.visible = true
-	go_button.visible = true
-	back_button.visible = true
-
-func _reset_noray_options():
-	noray_option_label.text = ""
-	host_game_button.visible = true
-	join_game_button.visible = true
-	host_ip_input.visible = false
-	game_id_input.visible = false
-	go_button.visible = false
-	back_button.visible = false
+		NetworkManager.host_game()
 
 func join_game():
-	print("Join game pressed %s" % game_id_input.text)
-	# NOTE: The game_id can represent both the ip to connect to or the host's game ID
-	
-	if NetworkManager.selected_network == NetworkManager.AvailableNetworks.NORAY:
-		_show_client_noray_options()
-			
-	elif game_id_input.text && game_id_input.text != "":
-		# Here we use Game ID to represent the host IP to connect to
-		NetworkManager.join_game(game_id_input.text, "") # Game ID not required for ENet
-		get_tree().call_deferred(&"change_scene_to_packed", preload(GAME_SCENE))
-	
-func _on_noray_button_toggled(toggled_on):
-	print("Noray enabled %s" % toggled_on)
-	#host_ip_input.visible = toggled_on
-	NetworkManager.noray_enabled(toggled_on)
-	
-	if toggled_on:
-		game_id_input.placeholder_text = NORAY_CLIENT_PLACEHOLDER_TEXT
-		game_id_input.text = ""
-	else:
-		game_id_input.placeholder_text = ENET_CLIENT_PLACEHOLDER_TEXT
-		game_id_input.text = DEFAULT_LOCALHOST_IP
+	_show_secondary_network_options()
 
-func _on_go_pressed():
-	print("On Go pressed")
-	if _host_selected:
-		# Host IP is required to host Noray game
-		if host_ip_input.text && host_ip_input.text != "":
-			NetworkManager.host_game(host_ip_input.text)
-			get_tree().call_deferred(&"change_scene_to_packed", preload(GAME_SCENE))
-	else:
-		# Host IP AND Game ID are both required for joining as client to Noray
-		if host_ip_input.text && host_ip_input.text != "" && game_id_input.text && game_id_input.text != "":
-			NetworkManager.join_game(host_ip_input.text, game_id_input.text)
-			get_tree().call_deferred(&"change_scene_to_packed", preload(GAME_SCENE))
+func _show_secondary_network_options(is_hosting: bool = false):
+	_hide_main_menu_options()
+	
+	var second_menu_to_load = load(NetworkManager.selected_network_configuration.menu)
+	var active_secondary_menu = second_menu_to_load.instantiate()
+	
+	# Add whatever necessary configuration is required in the sub menu
+	if _is_hosting:
+		active_secondary_menu.menu_config_options = { "is_hosting": is_hosting }
+		
+	secondary_network_menu_parent.add_child(active_secondary_menu)
+	
+	# Wire up completed and cancelled secondary menu signals
+	active_secondary_menu.secondary_menu_completed.connect(_secondary_menu_submitted)
+	active_secondary_menu.secondary_menu_cancelled.connect(_cancel_secondary_menu)
 
-func _on_back_pressed():
-	print("On Back pressed")
-	_reset_noray_options()
+func _secondary_menu_submitted(host_ip: String = "", host_port: String = "", game_id: String = ""):
+	if _is_hosting:
+		NetworkManager.host_game(host_ip)
+	else:
+		NetworkManager.join_game(host_ip, host_port, game_id)
+
+# NOTE: for now just use a toggle, but if you had another network type you wanted to support,
+# like Steam, we'd have to think of a different UI selection mechanism.
+func _on_noray_button_toggled(noray_enabled):
+	print("Noray enabled %s" % noray_enabled)
+	
+	if noray_enabled:
+		NetworkManager.set_selected_network(NetworkManager.AvailableNetworks.NORAY)
+	else:
+		NetworkManager.set_selected_network(NetworkManager.AvailableNetworks.ENET)
+
+func _reset_main_menu_options():
+	_is_hosting = false
+	host_game_button.visible = true
+	join_game_button.visible = true
+	toggle_secondary_network_checkbutton.visible = true
+	toggle_secondary_network_checkbutton.set_pressed_no_signal(false) # reset secondary selection
+	NetworkManager.reset_selected_network()
+
+func _hide_main_menu_options():
+	host_game_button.visible = false
+	join_game_button.visible = false
+	toggle_secondary_network_checkbutton.visible = false
+
+func _cancel_secondary_menu():
+	_reset_main_menu_options()
+	# Remove secondary menu
+	secondary_network_menu_parent.get_children()[0].queue_free()
 
 func exit_game():
 	get_tree().quit(0)
