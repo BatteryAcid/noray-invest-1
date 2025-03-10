@@ -35,11 +35,14 @@ func _on_go_pressed():
 	if _is_hosting:
 		# Host IP is required to host Noray game
 		if host_ip_input.text && host_ip_input.text != "":
-			secondary_menu_completed.emit(host_ip_input.text)
+			var network_connection_configs = NetworkConnectionConfigs.new(host_ip_input.text)
+			secondary_menu_completed.emit(network_connection_configs)
 	else:
 		# Host IP AND Game ID are both required for joining as client to Noray
 		if host_ip_input.text && host_ip_input.text != "" && game_id_input.text && game_id_input.text != "":
-			secondary_menu_completed.emit(host_ip_input.text, "", game_id_input.text) # No port param required here
+			var network_connection_configs = NetworkConnectionConfigs.new(host_ip_input.text)
+			network_connection_configs.game_id = game_id_input.text
+			secondary_menu_completed.emit(network_connection_configs)
 
 func _on_back_pressed():
 	print("On Back pressed")

@@ -5,6 +5,8 @@ extends Node
 # Variables like is_hosting_game must be reset upon exiting to main menu after a game has been played.
 
 const GAME_SCENE = "res://scenes/game.tscn"
+const LOCALHOST = "127.0.0.1"
+const DEDICATED_SERVER_FEATURE_NAME = "dedicated_server"
 
 enum AvailableNetworks {ENET, NORAY}
 
@@ -24,17 +26,16 @@ var is_hosting_game = false
 var active_host_ip = ""
 var active_game_id = ""
 
-# TODO: probably needs clean up for dedicated server
-func host_game(host_ip: String = ""):
+func host_game(network_connection_configs: NetworkConnectionConfigs):
 	print("Host game")
-	if not OS.has_feature("dedicated_server"):
+	if not OS.has_feature(DEDICATED_SERVER_FEATURE_NAME):
 		show_loading()
 	
 	# print("Selected network scene: %s" % selected_network_configuration.scene)
 	
 	# Keep these before the network scene is instantiated, to allow its _ready function to correctly read these properties.
 	is_hosting_game = true
-	active_host_ip = host_ip
+	active_host_ip = network_connection_configs.host_ip
 	
 	# We add the scene representing the selected network to the current tree
 	# so that we can access the multiplayer APIs
@@ -43,23 +44,26 @@ func host_game(host_ip: String = ""):
 	add_child(active_network_node)
 	
 	# Need to await here to avoid loading game scene to early
-	await active_network_node.create_server_peer(host_ip)
+	await active_network_node.create_server_peer(network_connection_configs)
 	
 	_load_game_scene()
 
-func join_game(host_ip: String, host_port: String = "", game_id: String = ""):
-	print("Join game, host_ip: %s:%s, game_id: %s" % [host_ip, host_port, game_id])
+func join_game(network_connection_configs: NetworkConnectionConfigs):
+	print("Join game, host_ip: %s:%s, game_id: %s" % [network_connection_configs.host_ip, network_connection_configs.host_port, network_connection_configs.game_id])
 	show_loading()
+	
+	# Client peers should load the game scene immediately, so that once the connection is made,
+	# we don't have to wait for it to load. 
+	_load_game_scene()
 	
 	var network_scene = load(selected_network_configuration.scene)
 	active_network_node = network_scene.instantiate()
 	add_child(active_network_node)
 	
 	# Connect client-side lifecycle signals
-	active_network_node.network_client_connected.connect(_load_game_scene)
 	active_network_node.network_server_disconnected.connect(disconnect_from_game)
 	
-	active_network_node.create_client_peer(host_ip, host_port.to_int(), game_id)
+	active_network_node.create_client_peer(network_connection_configs)
 	
 func set_selected_network(network_selected: AvailableNetworks):
 	print("Network selection updated: %s" % network_selected)

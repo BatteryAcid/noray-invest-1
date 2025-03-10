@@ -10,9 +10,9 @@ var _is_hosting = false
 func _ready():
 	print("Main menu ready...")
 
-	if OS.has_feature("dedicated_server"):
+	if OS.has_feature(NetworkManager.DEDICATED_SERVER_FEATURE_NAME):
 		print("Calling host game for dedicated server setup...")
-		NetworkManager.host_game()
+		NetworkManager.host_game(NetworkConnectionConfigs.new(NetworkManager.LOCALHOST))
 
 func host_game():
 	print("Host game pressed")
@@ -22,7 +22,7 @@ func host_game():
 	if NetworkManager.selected_network != NetworkManager.AvailableNetworks.ENET:
 		_show_secondary_network_options(true)
 	else:
-		NetworkManager.host_game()
+		NetworkManager.host_game(NetworkConnectionConfigs.new(NetworkManager.LOCALHOST))
 
 func join_game():
 	_show_secondary_network_options()
@@ -43,11 +43,11 @@ func _show_secondary_network_options(is_hosting: bool = false):
 	active_secondary_menu.secondary_menu_completed.connect(_secondary_menu_submitted)
 	active_secondary_menu.secondary_menu_cancelled.connect(_cancel_secondary_menu)
 
-func _secondary_menu_submitted(host_ip: String = "", host_port: String = "", game_id: String = ""):
+func _secondary_menu_submitted(network_connection_configs: NetworkConnectionConfigs):
 	if _is_hosting:
-		NetworkManager.host_game(host_ip)
+		NetworkManager.host_game(network_connection_configs)
 	else:
-		NetworkManager.join_game(host_ip, host_port, game_id)
+		NetworkManager.join_game(network_connection_configs)
 
 # NOTE: for now just use a toggle, but if you had another network type you wanted to support,
 # like Steam, we'd have to think of a different UI selection mechanism.

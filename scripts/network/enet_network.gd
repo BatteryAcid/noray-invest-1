@@ -10,16 +10,16 @@ const SERVER_PORT = 8080
 	# No connection exists when this _ready runs, it has yet to be established. 
 	# You cannot rely on authority checks until the connection has been made.
 
-func create_server_peer(no_op: String):
+func create_server_peer(network_connection_configs: NetworkConnectionConfigs):
 	var enet_network_peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
 	enet_network_peer.create_server(SERVER_PORT)
 	multiplayer.multiplayer_peer = enet_network_peer
 
-func create_client_peer(host_ip: String, host_port: int, no_op: String):
+func create_client_peer(network_connection_configs: NetworkConnectionConfigs):
 	setup_client_connection_signals()
 
 	var enet_network_peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
-	enet_network_peer.create_client(host_ip, host_port)
+	enet_network_peer.create_client(network_connection_configs.host_ip, network_connection_configs.host_port)
 	multiplayer.multiplayer_peer = enet_network_peer
 
 func _connected_to_server():

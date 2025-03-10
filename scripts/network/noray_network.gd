@@ -12,22 +12,22 @@ func _ready():
 	else:
 		setup_host_noray_connection_signals()
 
-func create_server_peer(host_ip: String):
+func create_server_peer(network_connection_configs: NetworkConnectionConfigs):
 	print("Create Noray server peer")
-	await _register_with_noray(host_ip)
+	await _register_with_noray(network_connection_configs.host_ip)
 	_start_noray_host()
 
-func create_client_peer(host_ip: String, no_op: int, hosts_oid: String):
+func create_client_peer(network_connection_configs: NetworkConnectionConfigs):
 	print("Create Noray client peer")
 	
 	# Stash the host_oid to use in the Noray connection signals
-	_current_host_oid = hosts_oid
-	await _register_with_noray(host_ip)
+	_current_host_oid = network_connection_configs.game_id
+	await _register_with_noray(network_connection_configs.host_ip)
 	
 	setup_client_enet_connection_signals()
 	
-	print("Kickoff Noray connection through NAT punchthrough with OID: %s" % hosts_oid)
-	Noray.connect_nat(hosts_oid)
+	print("Kickoff Noray connection through NAT punchthrough with OID: %s" % network_connection_configs.game_id)
+	Noray.connect_nat(network_connection_configs.game_id)
 
 func _register_with_noray(host_ip: String):
 	print("Register with Noray hosted at: %s" % host_ip)
