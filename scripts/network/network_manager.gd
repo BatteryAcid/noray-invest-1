@@ -5,6 +5,7 @@ extends Node
 # Variables like is_hosting_game must be reset upon exiting to main menu after a game has been played.
 
 const GAME_SCENE = "res://scenes/game.tscn"
+const MAIN_MENU_SCENE = "res://scenes/menus/main_menu.tscn"
 const LOCALHOST = "127.0.0.1"
 const DEDICATED_SERVER_FEATURE_NAME = "dedicated_server"
 
@@ -109,7 +110,7 @@ func _load_game_scene():
 	get_tree().call_deferred(&"change_scene_to_packed", preload(GAME_SCENE))
 
 func _load_main_menu_scene():
-	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
 
 func show_loading():
 	print("Show loading")
