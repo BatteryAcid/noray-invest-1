@@ -1,6 +1,7 @@
-[gd_scene load_steps=31 format=3 uid="uid://c7jxb55veskqd"]
+[gd_scene load_steps=32 format=3 uid="uid://c7jxb55veskqd"]
 
 [ext_resource type="PackedScene" uid="uid://btjx4a4g25xj3" path="res://scenes/network/multiplayer_manager.tscn" id="1_sg3yj"]
+[ext_resource type="PackedScene" uid="uid://gvalf557x803" path="res://scenes/menus/in_game_menu.tscn" id="2_lwxa3"]
 [ext_resource type="PackedScene" uid="uid://58bbdf2xo31b" path="res://scenes/world/env/campfire_logs.tscn" id="2_t2yqu"]
 [ext_resource type="Material" uid="uid://dtbe06c2i0ktm" path="res://asssets/world/world_material.tres" id="2_xgt50"]
 [ext_resource type="PackedScene" uid="uid://bqpbsgyb28ys7" path="res://scenes/world/env/rock_largeA.tscn" id="3_8kf7t"]
@@ -60,6 +61,8 @@ spawn_path = NodePath("../World/PlayerSpawnPoint")
 
 [node name="MultiplayerManager" parent="." node_paths=PackedStringArray("_player_spawn_point") instance=ExtResource("1_sg3yj")]
 _player_spawn_point = NodePath("../World/PlayerSpawnPoint")
+
+[node name="InGameMenu" parent="." instance=ExtResource("2_lwxa3")]
 
 [node name="World" type="Node3D" parent="."]
 
